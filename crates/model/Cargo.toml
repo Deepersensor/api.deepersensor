@@ -10,4 +10,6 @@ reqwest = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
- tokio = { package = "tokio", version = "1", features = ["rt-multi-thread","macros"] }
+async-trait = { workspace = true }
+async-stream = { workspace = true }
+futures-core = { workspace = true }

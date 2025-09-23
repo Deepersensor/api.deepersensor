@@ -1,7 +1,7 @@
 use async_stream::try_stream;
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::{pin::Pin, time::Duration};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -29,7 +29,6 @@ pub trait ModelProvider: Send + Sync + 'static {
 }
 
 pub type ChatStream = Pin<Box<dyn Stream<Item = ModelResult<ChatChunk>> + Send>>;
-use std::pin::Pin;
 
 pub struct OllamaProvider {
     base: String,
@@ -38,15 +37,12 @@ pub struct OllamaProvider {
 }
 
 impl OllamaProvider {
-    pub fn new(base: impl Into<String>, timeout: Duration) -> Self {
-        Self { base: base.into(), client: reqwest::Client::new(), timeout }
-    }
+    pub fn new(base: impl Into<String>, timeout: Duration) -> Self { Self { base: base.into(), client: reqwest::Client::new(), timeout } }
 }
 
 #[async_trait::async_trait]
 impl ModelProvider for OllamaProvider {
     async fn list_models(&self) -> ModelResult<Vec<String>> {
-        // Placeholder: upstream endpoint may differ
         let url = format!("{}/api/tags", self.base);
         let resp = self.client.get(url).timeout(self.timeout).send().await.map_err(|e| ModelError::Upstream(e.to_string()))?;
         let v: serde_json::Value = resp.json().await.map_err(|e| ModelError::Upstream(e.to_string()))?;
@@ -58,7 +54,6 @@ impl ModelProvider for OllamaProvider {
     }
 
     async fn chat_stream(&self, req: ChatRequest) -> ModelResult<ChatStream> {
-        // Placeholder streaming simulation
         let model = req.model.clone();
         let content = req.messages.iter().map(|m| m.content.clone()).collect::<Vec<_>>().join(" ");
         let stream = try_stream! {
