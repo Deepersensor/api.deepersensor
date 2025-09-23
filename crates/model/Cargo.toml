@@ -1,0 +1,13 @@
+[package]
+name = "ds-model"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+ tokio = { package = "tokio", version = "1", features = ["rt-multi-thread","macros"] }

@@ -143,3 +143,4 @@ Overall Progress: 0 / 16 completed (0%)
 2. Keep acceptance criteria immutable; append clarifications below rather than rewriting history.
 3. Add new tasks under proper phase; increment total for progress metric.
 4. Record changes in Changelog with date.
+5. Review and adjust priorities as project evolves.

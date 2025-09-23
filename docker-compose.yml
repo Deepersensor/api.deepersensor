@@ -1,0 +1,48 @@
+version: "3.9"
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    image: deepersensor/api:dev
+    env_file:
+      - ./.env
+    environment:
+      - APP_ENV=${APP_ENV:-local}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+      - ollama
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    image: deepersensor/nginx:dev
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    environment:
+      - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx
+
+volumes:
+  ollama_models: {}
