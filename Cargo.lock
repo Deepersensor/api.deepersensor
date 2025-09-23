@@ -541,6 +541,7 @@ name = "ds-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "axum",
  "config",
  "dotenvy",
  "once_cell",

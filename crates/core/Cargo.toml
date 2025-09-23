@@ -12,3 +12,4 @@ tracing = { workspace = true }
 thiserror = { workspace = true }
 once_cell = { workspace = true }
 anyhow = { workspace = true }
+axum.workspace = true
