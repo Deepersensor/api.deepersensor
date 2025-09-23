@@ -8,10 +8,15 @@ services:
     env_file:
       - ./.env
     environment:
-      - APP_ENV=${APP_ENV:-local}
+      - APP_ENV=production
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/deepersensor
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
     depends_on:
       - postgres
       - redis
@@ -24,8 +29,10 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=deepersensor
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -35,9 +42,9 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
-    ports:
-      - "6379:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--requirepass", "${REDIS_PASSWORD:-changeme}" ]
+    expose:
+      - "6379"
     restart: unless-stopped
 
   ollama:
@@ -62,4 +69,5 @@ services:
       - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx
 
 volumes:
+  postgres_data: {}
   ollama_models: {}
