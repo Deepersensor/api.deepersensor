@@ -76,21 +76,28 @@ struct LoginIn { email: String, password: String }
 #[derive(Serialize)]
 struct LoginOut { access_token: String }
 
-async fn signup(State(state): State<AppState>, Json(input): Json<SignupIn>) -> ApiResult<Json<SignupOut>> {
+async fn signup(State(state): State<AppState>, ConnectInfo(addr): ConnectInfo<SocketAddr>, Json(input): Json<SignupIn>) -> ApiResult<Json<SignupOut>> {
     if input.email.len() > 190 || !input.email.contains('@') { return Err(ApiError::Unprocessable("invalid email".into())); }
     if input.password.len() < 8 { return Err(ApiError::Unprocessable("password too short".into())); }
+    // Basic per-IP rate limit reuse (same as list_models/chat) to slow signup abuse
+    rate_limit(&state, addr.ip()).await?;
     let hash = hash_password(&input.password).map_err(|_| ApiError::Internal)?;
     let id = Uuid::new_v4();
-    // Use runtime query APIs to avoid compile-time offline sqlx checks in this environment
-    sqlx::query("INSERT INTO users (id,email,password_hash) VALUES ($1,$2,$3)")
+    if let Err(e) = sqlx::query("INSERT INTO users (id,email,password_hash) VALUES ($1,$2,$3)")
         .bind(id)
         .bind(&input.email)
         .bind(&hash)
-        .execute(&state.db).await.map_err(|e| { tracing::error!(error=%e, "signup insert failed"); ApiError::Internal })?;
+        .execute(&state.db).await {
+        tracing::warn!(error=%e, email=%input.email, "audit.signup.fail");
+        return Err(ApiError::Internal);
+    }
+    tracing::info!(user_id=%id, email=%input.email, "audit.signup.success");
     Ok(Json(SignupOut { id: id.to_string(), email: input.email }))
 }
 
-async fn login(State(state): State<AppState>, Json(input): Json<LoginIn>) -> ApiResult<Json<LoginOut>> {
+async fn login(State(state): State<AppState>, ConnectInfo(addr): ConnectInfo<SocketAddr>, Json(input): Json<LoginIn>) -> ApiResult<Json<LoginOut>> {
+    // Apply rate limiting to slow brute force attempts
+    rate_limit(&state, addr.ip()).await?;
     let rec_opt = sqlx::query("SELECT id, password_hash FROM users WHERE email=$1")
         .bind(&input.email)
         .fetch_optional(&state.db).await.map_err(|e| { tracing::error!(error=%e, "login query failed"); ApiError::Internal })?;
@@ -98,8 +105,21 @@ async fn login(State(state): State<AppState>, Json(input): Json<LoginIn>) -> Api
     use sqlx::Row;
     let id: uuid::Uuid = rec.try_get("id").map_err(|_| ApiError::Internal)?;
     let password_hash: String = rec.try_get("password_hash").map_err(|_| ApiError::Internal)?;
-    let valid = verify_password(&input.password, &password_hash).map_err(|_| ApiError::Internal)?;
-    if !valid { return Err(ApiError::Unauthorized); }
+    let (valid, needs_rehash) = verify_password(&input.password, &password_hash).map_err(|_| ApiError::Internal)?;
+    if !valid {
+        tracing::warn!(email=%input.email, "audit.login.fail");
+        return Err(ApiError::Unauthorized);
+    }
+    if needs_rehash {
+        let new_hash_result = ds_auth::hash_password(&input.password);
+        if let Ok(new_hash) = new_hash_result {
+            let _ = sqlx::query("UPDATE users SET password_hash=$1 WHERE id=$2")
+                .bind(&new_hash)
+                .bind(id)
+                .execute(&state.db).await;
+        }
+    }
+    tracing::info!(user_id=%id, email=%input.email, "audit.login.success");
     let cfg = state.config();
     let token = generate_tokens(&id.to_string(), &cfg.security.jwt_issuer, &cfg.security.jwt_secret, cfg.access_ttl())
         .map_err(|_| ApiError::Internal)?;

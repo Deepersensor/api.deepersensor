@@ -1,4 +1,4 @@
-use argon2::{Argon2, PasswordHasher, password_hash::{SaltString, PasswordHash, PasswordVerifier}};
+use argon2::{Argon2, PasswordHasher, password_hash::{SaltString, PasswordHash, PasswordVerifier, Ident, Algorithm as PHAlgorithm, Params as PHParams}};
 use jsonwebtoken::{encode, decode, Header, Validation, EncodingKey, DecodingKey, Algorithm};
 use rand::rngs::OsRng;
 use serde::{Serialize, Deserialize};
@@ -13,14 +13,33 @@ pub enum AuthError {
     #[error("token decode error")] TokenDecode,
 }
 
-pub fn hash_password(raw: &str) -> Result<String, AuthError> {
-    let salt = SaltString::generate(&mut OsRng);
-    Argon2::default().hash_password(raw.as_bytes(), &salt).map(|h| h.to_string()).map_err(|_| AuthError::Hash)
+// Tuned Argon2id parameters (balanced for security vs. latency; adjust after load tests)
+const ARGON2_M_COST: u32 = 19456; // ~19 MB
+const ARGON2_T_COST: u32 = 2;     // iterations
+const ARGON2_P_COST: u32 = 1;     // parallelism (increase if CPU bound and acceptable)
+
+fn argon2_instance() -> Argon2 {
+    let params = PHParams::new(ARGON2_M_COST, ARGON2_T_COST, ARGON2_P_COST, None)
+        .expect("valid argon2 params");
+    Argon2::from_phf(Ident::Argon2id, PHAlgorithm::Argon2id, params)
 }
 
-pub fn verify_password(raw: &str, hash: &str) -> Result<bool, AuthError> {
+pub fn hash_password(raw: &str) -> Result<String, AuthError> {
+    let salt = SaltString::generate(&mut OsRng);
+    argon2_instance().hash_password(raw.as_bytes(), &salt).map(|h| h.to_string()).map_err(|_| AuthError::Hash)
+}
+
+// Returns (is_valid, needs_rehash)
+pub fn verify_password(raw: &str, hash: &str) -> Result<(bool, bool), AuthError> {
     let parsed = PasswordHash::new(hash).map_err(|_| AuthError::Verify)?;
-    Ok(Argon2::default().verify_password(raw.as_bytes(), &parsed).is_ok())
+    let alg_ok = parsed.algorithm == PHAlgorithm::Argon2id.ident();
+    let valid = Argon2::default().verify_password(raw.as_bytes(), &parsed).is_ok();
+    if !valid { return Ok((false, false)); }
+    // Determine if parameters differ from our target (trigger rehash on next login or background job)
+    let needs_rehash = !alg_ok || parsed.params.get("m").and_then(|v| v.decimal()).unwrap_or(0) != ARGON2_M_COST as u64
+        || parsed.params.get("t").and_then(|v| v.decimal()).unwrap_or(0) != ARGON2_T_COST as u64
+        || parsed.params.get("p").and_then(|v| v.decimal()).unwrap_or(0) != ARGON2_P_COST as u64;
+    Ok((true, needs_rehash))
 }
 
 #[derive(Debug, Serialize, Deserialize)]

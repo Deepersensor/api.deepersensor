@@ -49,6 +49,7 @@ pub async fn build_app(cfg: Arc<AppConfig>) -> AppStateAndRouter {
 
     let router = Router::new()
         .merge(routes::routes())
+        .layer(crate::security::security_headers())
         .layer(middleware)
         .layer(cors);
     AppStateAndRouter { state, router }
