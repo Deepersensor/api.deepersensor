@@ -24,8 +24,8 @@ Overall Progress: 5 / 16 completed (31%)
 |----|------|----------|--------|-------|
 | model-provider | Trait: ModelProvider + Ollama client stub | H | [x] | Basic trait + Ollama stub implemented |
 | http-routes | Base routes: /health, /v1/models, /v1/chat (stream stub) | H | [x] | Implemented incl. SSE stream endpoint |
-| auth | Auth: signup/login, password hashing, JWT issuance & refresh | H | [ ] | Support short-lived access + refresh token |
-| persistence | Postgres integration (sqlx) + migrations folder | H | [ ] | Migration tool: sqlx migrate / refinery |
+| auth | Auth: signup/login, password hashing, JWT issuance & refresh | H | [~] | Basic signup/login + JWT access done |
+| persistence | Postgres integration (sqlx) + migrations folder | H | [~] | Pool + initial users migration added |
 
 ## Phase 2 – Platform & Reliability
 | ID | Task | Priority | Status | Notes |
@@ -33,7 +33,7 @@ Overall Progress: 5 / 16 completed (31%)
 | rate-limiting | Redis-backed rate limiting + request ID middleware | M | [ ] | Per-IP + per-user buckets |
 | docker | Multi-stage Dockerfile + docker-compose (api, postgres, redis, ollama, nginx) | H | [ ] | Enable reproducible local stack |
 | nginx | Reverse proxy config (TLS termination, gzip, cache rules) | M | [ ] | Forward /api to backend & serve Next.js |
-| security | CORS policy, security headers (STRICT-TRANSPORT-SECURITY, etc.), input validation hooks | M | [ ] | Add body size limits |
+| security | CORS policy, security headers (STRICT-TRANSPORT-SECURITY, etc.), input validation hooks | M | [~] | Basic security headers added |
 
 ## Phase 3 – Frontend Integration
 | ID | Task | Priority | Status | Notes |

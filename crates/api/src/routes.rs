@@ -8,7 +8,9 @@ use ds_model::{ChatMessage, ChatRequest, ChatChunk, ModelProvider};
 use crate::{state::AppState, rate_limit::rate_limit};
 use axum::response::sse::{Sse, Event};
 use futures_util::Stream;
+use ds_auth::{hash_password, verify_password, generate_tokens};
 use std::pin::Pin;
+use uuid::Uuid;
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -17,6 +19,8 @@ pub fn routes() -> Router<AppState> {
         .route("/v1/models", get(list_models))
         .route("/v1/chat", post(chat))
         .route("/v1/chat/stream", post(chat_stream_sse))
+        .route("/v1/auth/signup", post(signup))
+        .route("/v1/auth/login", post(login))
 }
 
 async fn health() -> impl IntoResponse { (StatusCode::OK, "ok") }
@@ -61,6 +65,37 @@ async fn chat_stream_sse(State(state): State<AppState>, ConnectInfo(addr): Conne
         }
     });
     Ok(Sse::new(mapped))
+}
+
+#[derive(Deserialize)]
+struct SignupIn { email: String, password: String }
+#[derive(Serialize)]
+struct SignupOut { id: String, email: String }
+#[derive(Deserialize)]
+struct LoginIn { email: String, password: String }
+#[derive(Serialize)]
+struct LoginOut { access_token: String }
+
+async fn signup(State(state): State<AppState>, Json(input): Json<SignupIn>) -> ApiResult<Json<SignupOut>> {
+    if input.email.len() > 190 || !input.email.contains('@') { return Err(ApiError::Unprocessable("invalid email".into())); }
+    if input.password.len() < 8 { return Err(ApiError::Unprocessable("password too short".into())); }
+    let hash = hash_password(&input.password).map_err(|_| ApiError::Internal)?;
+    let id = Uuid::new_v4();
+    let rec = sqlx::query!("INSERT INTO users (id,email,password_hash) VALUES ($1,$2,$3) RETURNING id, email", id, input.email, hash)
+        .fetch_one(&state.db).await.map_err(|e| { tracing::error!(error=%e, "signup insert failed"); ApiError::Internal })?;
+    Ok(Json(SignupOut { id: rec.id.to_string(), email: rec.email }))
+}
+
+async fn login(State(state): State<AppState>, Json(input): Json<LoginIn>) -> ApiResult<Json<LoginOut>> {
+    let rec = sqlx::query!("SELECT id, password_hash FROM users WHERE email=$1", input.email)
+        .fetch_optional(&state.db).await.map_err(|e| { tracing::error!(error=%e, "login query failed"); ApiError::Internal })?;
+    let rec = rec.ok_or(ApiError::Unauthorized)?;
+    let valid = verify_password(&input.password, &rec.password_hash).map_err(|_| ApiError::Internal)?;
+    if !valid { return Err(ApiError::Unauthorized); }
+    let cfg = state.config();
+    let token = generate_tokens(&rec.id.to_string(), &cfg.security.jwt_issuer, &cfg.security.jwt_secret, cfg.access_ttl())
+        .map_err(|_| ApiError::Internal)?;
+    Ok(Json(LoginOut { access_token: token }))
 }
 
 fn validate_chat(input: &ChatIn) -> ApiResult<()> {

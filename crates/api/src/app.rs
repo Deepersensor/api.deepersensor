@@ -6,6 +6,7 @@ use ds_core::config::AppConfig;
 use ds_model::{ModelProvider, OllamaProvider};
 use http::header::HeaderName;
 use crate::{state::AppState, cors::build_cors, routes, observability::REQUEST_ID_HEADER};
+use crate::security::security_headers;
 use uuid::Uuid;
 
 struct MakeRequestUuid;
@@ -16,9 +17,10 @@ impl MakeRequestId for MakeRequestUuid {
     }
 }
 
-pub fn build_app(cfg: Arc<AppConfig>) -> AppStateAndRouter {
+pub async fn build_app(cfg: Arc<AppConfig>) -> AppStateAndRouter {
     let provider = Arc::new(OllamaProvider::new(cfg.ollama.base_url.clone(), Duration::from_millis(cfg.ollama.default_timeout_ms))) as Arc<dyn ModelProvider>;
-    let state = AppState::new(provider, cfg.clone());
+    let db = sqlx::PgPool::connect_lazy(cfg.database_url()).expect("valid db url");
+    let state = AppState::new(provider, cfg.clone(), db);
     let cors = build_cors(&cfg);
     let request_id_header: HeaderName = REQUEST_ID_HEADER.parse().expect("valid x-request-id header name");
 
@@ -46,7 +48,8 @@ pub fn build_app(cfg: Arc<AppConfig>) -> AppStateAndRouter {
         .merge(routes::routes())
         .with_state(state.clone())
         .layer(middleware)
-        .layer(cors);
+        .layer(cors)
+        .layer(security_headers());
     AppStateAndRouter { state, router }
 }
 

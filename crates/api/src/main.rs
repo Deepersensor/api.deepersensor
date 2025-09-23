@@ -1,4 +1,4 @@
-mod app; mod cors; mod observability; mod shutdown; mod state; mod rate_limit; mod routes;
+mod app; mod cors; mod observability; mod shutdown; mod state; mod rate_limit; mod routes; mod security;
 use std::sync::Arc;
 use tracing::{info, warn};
 use ds_core::config::AppConfig;
@@ -14,7 +14,11 @@ async fn main() -> anyhow::Result<()> {
     init_tracing(&cfg);
 
     let addr = server_addr(&cfg);
-    let app_state_and_router = build_app(cfg.clone());
+    let app_state_and_router = build_app(cfg.clone()).await;
+    // Run database migrations at startup (fail-fast if they cannot run)
+    if let Err(e) = sqlx::migrate!("./migrations").run(&app_state_and_router.state.db).await {
+        anyhow::bail!("failed running migrations: {e}");
+    }
     info!(%addr, env = %cfg.app.env, "starting server");
 
     let server = Server::bind(&addr).serve(app_state_and_router.router.into_make_service_with_connect_info::<std::net::SocketAddr>());
