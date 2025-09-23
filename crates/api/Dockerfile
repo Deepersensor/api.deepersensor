@@ -4,14 +4,14 @@ FROM rust:${RUST_VERSION}-slim AS builder
 WORKDIR /app
 # Create empty dirs to leverage caching of deps
 COPY Cargo.toml Cargo.lock ../
-COPY api/Cargo.toml api/Cargo.toml
+COPY crates/api/Cargo.toml crates/api/Cargo.toml
 COPY crates/core/Cargo.toml crates/core/Cargo.toml
 COPY crates/model/Cargo.toml crates/model/Cargo.toml
 COPY crates/auth/Cargo.toml crates/auth/Cargo.toml
 
 # Dummy build to cache dependencies
-RUN mkdir -p api/src crates/core/src crates/model/src crates/auth/src \
- && echo 'fn main(){}' > api/src/main.rs \
+RUN mkdir -p crates/api/src crates/core/src crates/model/src crates/auth/src \
+ && echo 'fn main(){}' > crates/api/src/main.rs \
  && echo '' > crates/core/src/lib.rs \
  && echo '' > crates/model/src/lib.rs \
  && echo '' > crates/auth/src/lib.rs \

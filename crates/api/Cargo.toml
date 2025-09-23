@@ -20,6 +20,6 @@ tower = { workspace = true }
 tower-http = { workspace = true }
  tokio = { workspace = true }
 # Internal crates
-ds-core = { path = "../crates/core" }
-ds-model = { path = "../crates/model" }
-ds-auth = { path = "../crates/auth" }
+ds-core = { path = "../core" }
+ds-model = { path = "../model" }
+ds-auth = { path = "../auth" }

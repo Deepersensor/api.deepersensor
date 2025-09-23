@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 use axum::Router;
 use tower::{limit::ConcurrencyLimitLayer, ServiceBuilder, Layer};
-use tower_http::{trace::TraceLayer, request_id::{MakeRequestId, PropagateRequestIdLayer, SetRequestIdLayer}};
+use tower_http::{trace::TraceLayer, request_id::{MakeRequestId, PropagateRequestIdLayer, SetRequestIdLayer}, limit::RequestBodyLimitLayer};
 use ds_core::config::AppConfig;
 use ds_model::{ModelProvider, OllamaProvider};
 use http::header::HeaderName;
@@ -22,12 +22,24 @@ pub fn build_app(cfg: Arc<AppConfig>) -> AppStateAndRouter {
     let cors = build_cors(&cfg);
     let request_id_header: HeaderName = REQUEST_ID_HEADER.parse().expect("valid x-request-id header name");
 
-    let trace = TraceLayer::new_for_http();
+    let trace = TraceLayer::new_for_http()
+        .make_span_with(|req: &http::Request<_>| {
+            let method = req.method().clone();
+            let uri = req.uri().path().to_string();
+            tracing::info_span!("request", %method, %uri, status = tracing::field::Empty)
+        })
+        .on_response(|res: &http::Response<_>, latency: std::time::Duration, span: &tracing::Span| {
+            let status = res.status().as_u16();
+            span.record("status", &tracing::field::display(status));
+            tracing::info!(parent: span, status, latency_ms = latency.as_millis(), "request.completed");
+        });
+    let body_limit = RequestBodyLimitLayer::new(cfg.http.max_request_size_bytes as usize);
 
     let middleware = ServiceBuilder::new()
         .layer(SetRequestIdLayer::new(request_id_header.clone(), MakeRequestUuid))
         .layer(PropagateRequestIdLayer::new(request_id_header.clone()))
         .layer(trace)
+        .layer(body_limit)
         .layer(ConcurrencyLimitLayer::new(1024));
 
     let router = Router::new()

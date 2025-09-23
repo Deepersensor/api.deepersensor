@@ -11,6 +11,7 @@ pub struct AppConfig {
     pub redis: RedisSection,
     pub http: HttpSection,
     pub cors: CorsSection,
+    pub database: DatabaseSection,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -71,6 +72,9 @@ pub struct CorsSection {
     pub allow_methods: String,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct DatabaseSection { pub url: String }
+
 impl AppConfig {
     pub fn load() -> anyhow::Result<Self> {
         // Load .env if present
@@ -103,13 +107,15 @@ impl AppConfig {
             .set_default("cors.allow_credentials", env_or("CORS_ALLOW_CREDENTIALS", "false"))?
             .set_default("cors.allow_headers", env_or("CORS_ALLOW_HEADERS", "Authorization,Content-Type"))?
             .set_default("cors.expose_headers", env_or("CORS_EXPOSE_HEADERS", "Authorization,Content-Type"))?
-            .set_default("cors.allow_methods", env_or("CORS_ALLOW_METHODS", "GET,POST,OPTIONS"))?;
+            .set_default("cors.allow_methods", env_or("CORS_ALLOW_METHODS", "GET,POST,OPTIONS"))?
+            .set_default("database.url", env_or("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/deepersensor"))?;
 
         let cfg = builder.build()?;
         Ok(cfg.try_deserialize()?)
     }
 
     pub fn is_production(&self) -> bool { self.app.env == "production" }
+    pub fn database_url(&self) -> &str { &self.database.url }
     pub fn access_ttl(&self) -> Duration { Duration::from_secs(self.security.jwt_access_ttl_secs) }
     pub fn refresh_ttl(&self) -> Duration { Duration::from_secs(self.security.jwt_refresh_ttl_secs) }
 }

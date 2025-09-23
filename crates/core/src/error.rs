@@ -8,6 +8,7 @@ pub enum ApiError {
     #[error("Unauthorized")] Unauthorized,
     #[error("Forbidden")] Forbidden,
     #[error("Bad Request: {0}")] BadRequest(String),
+    #[error("Unprocessable: {0}")] Unprocessable(String),
     #[error("Too Many Requests")] RateLimited,
     #[error("Internal Server Error")] Internal,
 }
@@ -24,6 +25,7 @@ impl IntoResponse for ApiError {
             ApiError::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized"),
             ApiError::Forbidden => (StatusCode::FORBIDDEN, "forbidden"),
             ApiError::BadRequest(_) => (StatusCode::BAD_REQUEST, "bad_request"),
+            ApiError::Unprocessable(_) => (StatusCode::UNPROCESSABLE_ENTITY, "unprocessable"),
             ApiError::RateLimited => (StatusCode::TOO_MANY_REQUESTS, "rate_limited"),
             ApiError::Internal => (StatusCode::INTERNAL_SERVER_ERROR, "internal_error"),
         };

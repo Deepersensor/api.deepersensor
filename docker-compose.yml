@@ -3,7 +3,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: api/Dockerfile
+      dockerfile: crates/api/Dockerfile
     image: deepersensor/api:dev
     env_file:
       - ./.env

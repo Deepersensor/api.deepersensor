@@ -1,29 +1,29 @@
 # DeeperSensor API & Frontend Roadmap (TODO)
 
-Last Updated: 2025-09-20
+Last Updated: 2025-09-23
 
 ## Legend
 - Status: [ ] pending · [~] in progress · [x] completed · [-] cancelled
 - Priority: (H) High · (M) Medium · (L) Low
 - IDs match internal automation / tooling references
 
-Overall Progress: 0 / 16 completed (0%)
+Overall Progress: 5 / 16 completed (31%)
 
 ---
 ## Phase 0 – Foundation & Workspace
 | ID | Task | Priority | Status | Notes |
 |----|------|----------|--------|-------|
-| workspace | Convert to Cargo workspace (crates: api, core, model, auth) | H | [ ] | Prepare modular boundaries early |
-| deps | Add foundational crates (axum, tokio, tracing, serde, sqlx, argon2, jsonwebtoken, config/dotenv, anyhow/thiserror) | H | [ ] | Keep minimal; add as needed |
-| config | Unified config loader (env + .env + defaults) | H | [ ] | Support prod profile separation |
-| logging | Structured logging + tracing + metrics (/metrics) | H | [ ] | Use tracing-subscriber + optionally opentelemetry |
-| errors | Unified error type and HTTP mapper | M | [ ] | Map domain + validation + upstream errors |
+| workspace | Convert to Cargo workspace (crates: api, core, model, auth) | H | [x] | Completed initial workspace + relocation |
+| deps | Add foundational crates (axum, tokio, tracing, serde, sqlx, argon2, jsonwebtoken, config/dotenv, anyhow/thiserror) | H | [x] | Added base deps incl. sqlx placeholder |
+| config | Unified config loader (env + .env + defaults) | H | [x] | Includes database.url + prod secret checks |
+| logging | Structured logging + tracing + metrics (/metrics) | H | [~] | Request span fields added; metrics stub |
+| errors | Unified error type and HTTP mapper | M | [~] | Added 422 variant; mapping implemented |
 
 ## Phase 1 – Core AI & HTTP Surface
 | ID | Task | Priority | Status | Notes |
 |----|------|----------|--------|-------|
-| model-provider | Trait: ModelProvider + Ollama client stub | H | [ ] | Graceful timeouts & retries |
-| http-routes | Base routes: /health, /v1/models, /v1/chat (stream stub) | H | [ ] | Chat returns streaming SSE or chunked JSON |
+| model-provider | Trait: ModelProvider + Ollama client stub | H | [x] | Basic trait + Ollama stub implemented |
+| http-routes | Base routes: /health, /v1/models, /v1/chat (stream stub) | H | [x] | Implemented incl. SSE stream endpoint |
 | auth | Auth: signup/login, password hashing, JWT issuance & refresh | H | [ ] | Support short-lived access + refresh token |
 | persistence | Postgres integration (sqlx) + migrations folder | H | [ ] | Migration tool: sqlx migrate / refinery |
 
@@ -136,6 +136,7 @@ Overall Progress: 0 / 16 completed (0%)
 ---
 ## Changelog
 - 2025-09-20: Initial TODO roadmap created.
+- 2025-09-23: Phase 0 workspace, deps, config complete; partial logging & errors; Phase 1 model-provider & http-routes complete.
 
 ---
 ## Update Instructions
