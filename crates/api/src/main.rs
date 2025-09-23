@@ -2,7 +2,7 @@ mod app; mod cors; mod observability; mod shutdown; mod state; mod rate_limit; m
 use std::sync::Arc;
 use tracing::{info, warn};
 use ds_core::config::AppConfig;
-use axum::Server;
+use hyper::Server;
 use crate::app::{build_app, server_addr};
 use crate::observability::init_tracing;
 use crate::shutdown::shutdown_signal;

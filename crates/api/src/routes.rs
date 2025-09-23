@@ -1,15 +1,15 @@
 use std::net::SocketAddr; 
 use axum::{routing::{get, post}, Router};
-use axum::{extract::{State, ConnectInfo}, http::StatusCode, response::{IntoResponse, Response}, Json};
+use axum::{extract::{State, ConnectInfo}, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 use futures_util::StreamExt;
 use ds_core::error::{ApiError, ApiResult};
-use ds_model::{ChatMessage, ChatRequest, ChatChunk, ModelProvider};
+use ds_model::{ChatMessage, ChatRequest, ChatChunk};
 use crate::{state::AppState, rate_limit::rate_limit};
 use axum::response::sse::{Sse, Event};
 use futures_util::Stream;
 use ds_auth::{hash_password, verify_password, generate_tokens};
-use std::pin::Pin;
+// use std::pin::Pin;
 use uuid::Uuid;
 
 pub fn routes() -> Router<AppState> {

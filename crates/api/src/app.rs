@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 use axum::Router;
-use tower::{limit::ConcurrencyLimitLayer, ServiceBuilder, Layer};
+use tower::{limit::ConcurrencyLimitLayer, ServiceBuilder};
 use axum::http;
 use tower_http::request_id::{RequestId, MakeRequestId};
 use tower_http::{trace::TraceLayer, request_id::{PropagateRequestIdLayer, SetRequestIdLayer}, limit::RequestBodyLimitLayer};
@@ -8,7 +8,8 @@ use ds_core::config::AppConfig;
 use ds_model::{ModelProvider, OllamaProvider};
 use http::header::HeaderName;
 use crate::{state::AppState, cors::build_cors, routes, observability::REQUEST_ID_HEADER};
-use crate::security::security_headers;
+// security headers are available but not currently applied to the global router
+// use crate::security::security_headers;
 use uuid::Uuid;
 
 #[derive(Clone)]
