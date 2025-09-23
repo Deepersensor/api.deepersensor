@@ -1,7 +1,6 @@
 use tower_http::set_header::SetResponseHeaderLayer;
-use http::HeaderValue;
+use axum::http::{self, HeaderValue};
 use tower::Layer;
-use tower::util::Either;
 
 pub fn security_headers() -> impl Layer<axum::Router> + Clone {
     // Chain a few static security headers (minimal initial set)

@@ -18,8 +18,8 @@ authors = ["DeeperSensor <official-support@deepersensor.com>"]
 tokio = { version = "1", features = ["rt-multi-thread","macros","signal","time"] }
 axum = { version = "0.7", features = ["macros","json"] }
 hyper = { version = "1", features = ["full"] }
-tower = "0.4"
-tower-http = { version = "0.5", features = ["trace","cors","request-id","limit","compression-br", "compression-gzip"] }
+tower = { version = "0.4", features = ["util","limit"] }
+tower-http = { version = "0.5", features = ["trace","cors","request-id","limit","compression-br", "compression-gzip", "set-header"] }
 
 # Serde / Config
 serde = { version = "1", features = ["derive"] }
@@ -50,7 +50,7 @@ jsonwebtoken = "9"
 rand = "0.8"
 
 # HTTP Client
-reqwest = { version = "0.12", features = ["json","stream","gzip","brotli","deflate"] }
+reqwest = { version = "0.12", default-features = false, features = ["json","stream","gzip","brotli","deflate","rustls-tls"] }
 
 # Rate limiting / Redis
 redis = { version = "0.25", features = ["tokio-comp","aio","connection-manager"] }
