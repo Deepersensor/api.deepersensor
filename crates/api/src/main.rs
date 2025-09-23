@@ -2,7 +2,7 @@ mod app; mod cors; mod observability; mod shutdown; mod state; mod rate_limit; m
 use std::sync::Arc;
 use tracing::{info, warn};
 use ds_core::config::AppConfig;
-use hyper::Server;
+use tokio::net::TcpListener;
 use crate::app::{build_app, server_addr};
 use crate::observability::init_tracing;
 use crate::shutdown::shutdown_signal;
@@ -29,8 +29,10 @@ async fn main() -> anyhow::Result<()> {
 
     let router_with_state = app_state_and_router.router.with_state(app_state_and_router.state.clone());
     let make_svc = router_with_state.into_make_service_with_connect_info::<std::net::SocketAddr>();
-    let server = Server::bind(&addr).serve(make_svc);
-    server.with_graceful_shutdown(shutdown_signal()).await?;
+    let listener = TcpListener::bind(addr).await?;
+    axum::serve(listener, make_svc)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
     Ok(())
 }
 
