@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-ARG RUST_VERSION=1.81
+ARG RUST_VERSION=1.82
 FROM rust:${RUST_VERSION}-slim AS builder
 WORKDIR /app
 # Create empty dirs to leverage caching of deps
