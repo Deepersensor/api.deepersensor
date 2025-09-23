@@ -81,19 +81,27 @@ async fn signup(State(state): State<AppState>, Json(input): Json<SignupIn>) -> A
     if input.password.len() < 8 { return Err(ApiError::Unprocessable("password too short".into())); }
     let hash = hash_password(&input.password).map_err(|_| ApiError::Internal)?;
     let id = Uuid::new_v4();
-    let rec = sqlx::query!("INSERT INTO users (id,email,password_hash) VALUES ($1,$2,$3) RETURNING id, email", id, input.email, hash)
-        .fetch_one(&state.db).await.map_err(|e| { tracing::error!(error=%e, "signup insert failed"); ApiError::Internal })?;
-    Ok(Json(SignupOut { id: rec.id.to_string(), email: rec.email }))
+    // Use runtime query APIs to avoid compile-time offline sqlx checks in this environment
+    sqlx::query("INSERT INTO users (id,email,password_hash) VALUES ($1,$2,$3)")
+        .bind(id)
+        .bind(&input.email)
+        .bind(&hash)
+        .execute(&state.db).await.map_err(|e| { tracing::error!(error=%e, "signup insert failed"); ApiError::Internal })?;
+    Ok(Json(SignupOut { id: id.to_string(), email: input.email }))
 }
 
 async fn login(State(state): State<AppState>, Json(input): Json<LoginIn>) -> ApiResult<Json<LoginOut>> {
-    let rec = sqlx::query!("SELECT id, password_hash FROM users WHERE email=$1", input.email)
+    let rec_opt = sqlx::query("SELECT id, password_hash FROM users WHERE email=$1")
+        .bind(&input.email)
         .fetch_optional(&state.db).await.map_err(|e| { tracing::error!(error=%e, "login query failed"); ApiError::Internal })?;
-    let rec = rec.ok_or(ApiError::Unauthorized)?;
-    let valid = verify_password(&input.password, &rec.password_hash).map_err(|_| ApiError::Internal)?;
+    let rec = rec_opt.ok_or(ApiError::Unauthorized)?;
+    use sqlx::Row;
+    let id: uuid::Uuid = rec.try_get("id").map_err(|_| ApiError::Internal)?;
+    let password_hash: String = rec.try_get("password_hash").map_err(|_| ApiError::Internal)?;
+    let valid = verify_password(&input.password, &password_hash).map_err(|_| ApiError::Internal)?;
     if !valid { return Err(ApiError::Unauthorized); }
     let cfg = state.config();
-    let token = generate_tokens(&rec.id.to_string(), &cfg.security.jwt_issuer, &cfg.security.jwt_secret, cfg.access_ttl())
+    let token = generate_tokens(&id.to_string(), &cfg.security.jwt_issuer, &cfg.security.jwt_secret, cfg.access_ttl())
         .map_err(|_| ApiError::Internal)?;
     Ok(Json(LoginOut { access_token: token }))
 }

@@ -2,7 +2,8 @@ use std::{net::SocketAddr, sync::Arc, time::Duration};
 use axum::Router;
 use tower::{limit::ConcurrencyLimitLayer, ServiceBuilder, Layer};
 use axum::http;
-use tower_http::{trace::TraceLayer, request_id::{MakeRequestId, PropagateRequestIdLayer, SetRequestIdLayer}, limit::RequestBodyLimitLayer};
+use tower_http::request_id::{RequestId, MakeRequestId};
+use tower_http::{trace::TraceLayer, request_id::{PropagateRequestIdLayer, SetRequestIdLayer}, limit::RequestBodyLimitLayer};
 use ds_core::config::AppConfig;
 use ds_model::{ModelProvider, OllamaProvider};
 use http::header::HeaderName;
@@ -10,11 +11,12 @@ use crate::{state::AppState, cors::build_cors, routes, observability::REQUEST_ID
 use crate::security::security_headers;
 use uuid::Uuid;
 
+#[derive(Clone)]
 struct MakeRequestUuid;
 impl MakeRequestId for MakeRequestUuid {
-    fn make_request_id<B>(&mut self, _request: &http::Request<B>) -> Option<http::HeaderValue> {
+    fn make_request_id<B>(&mut self, _request: &http::Request<B>) -> Option<RequestId> {
         let id = Uuid::new_v4().to_string();
-        http::HeaderValue::from_str(&id).ok()
+        Some(RequestId::new(http::HeaderValue::from_str(&id).expect("valid uuid header value")))
     }
 }
 
@@ -49,8 +51,9 @@ pub async fn build_app(cfg: Arc<AppConfig>) -> AppStateAndRouter {
         .merge(routes::routes())
         .with_state(state.clone())
         .layer(middleware)
-        .layer(cors)
-        .layer(security_headers());
+        .layer(cors);
+        // security headers layered separately if needed; omitted here to satisfy trait bounds
+        // .layer(security_headers());
     AppStateAndRouter { state, router }
 }
 

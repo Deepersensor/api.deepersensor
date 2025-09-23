@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 axum = { workspace = true }
+hyper = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 serde = { workspace = true }

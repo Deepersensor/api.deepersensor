@@ -1,6 +1,7 @@
 use axum::http::{HeaderValue, Method, header::HeaderName};
 use tower_http::cors::CorsLayer;
 use ds_core::config::AppConfig;
+use std::str::FromStr;
 
 pub fn build_cors(cfg: &AppConfig) -> CorsLayer {
     let origins: Vec<HeaderValue> = cfg.security.allowed_origins.split(',')
