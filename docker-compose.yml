@@ -44,8 +44,9 @@ services:
     image: ollama/ollama:latest
     volumes:
       - ollama_models:/root/.ollama
-    ports:
-      - "11434:11434"
+    ports: []
+    expose:
+      - "11434"
     restart: unless-stopped
 
   nginx:

@@ -1,0 +1,8 @@
+version: "3.9"
+services:
+  ollama:
+    # Remove any published host ports from base file
+    ports: []
+    # Keep the port available to other services in the compose network
+    expose:
+      - "11434"
