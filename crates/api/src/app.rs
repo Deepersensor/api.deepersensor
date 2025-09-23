@@ -49,7 +49,6 @@ pub async fn build_app(cfg: Arc<AppConfig>) -> AppStateAndRouter {
 
     let router = Router::new()
         .merge(routes::routes())
-        .with_state(state.clone())
         .layer(middleware)
         .layer(cors);
         // security headers layered separately if needed; omitted here to satisfy trait bounds
