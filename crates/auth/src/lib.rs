@@ -1,4 +1,4 @@
-use argon2::{Argon2, PasswordHasher, password_hash::{SaltString, PasswordHash, PasswordVerifier, Ident, Algorithm as PHAlgorithm, Params as PHParams}};
+use argon2::{Argon2, PasswordHasher, password_hash::{SaltString, PasswordHash, PasswordVerifier}};
 use jsonwebtoken::{encode, decode, Header, Validation, EncodingKey, DecodingKey, Algorithm};
 use rand::rngs::OsRng;
 use serde::{Serialize, Deserialize};
@@ -18,10 +18,11 @@ const ARGON2_M_COST: u32 = 19456; // ~19 MB
 const ARGON2_T_COST: u32 = 2;     // iterations
 const ARGON2_P_COST: u32 = 1;     // parallelism (increase if CPU bound and acceptable)
 
-fn argon2_instance() -> Argon2 {
-    let params = PHParams::new(ARGON2_M_COST, ARGON2_T_COST, ARGON2_P_COST, None)
+fn argon2_instance() -> Argon2<'static> {
+    // Build params via builder on Argon2 0.5 (if not available, fall back to default + comment)
+    let params = argon2::Params::new(ARGON2_M_COST, ARGON2_T_COST, ARGON2_P_COST, None)
         .expect("valid argon2 params");
-    Argon2::from_phf(Ident::Argon2id, PHAlgorithm::Argon2id, params)
+    Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params)
 }
 
 pub fn hash_password(raw: &str) -> Result<String, AuthError> {
@@ -32,13 +33,26 @@ pub fn hash_password(raw: &str) -> Result<String, AuthError> {
 // Returns (is_valid, needs_rehash)
 pub fn verify_password(raw: &str, hash: &str) -> Result<(bool, bool), AuthError> {
     let parsed = PasswordHash::new(hash).map_err(|_| AuthError::Verify)?;
-    let alg_ok = parsed.algorithm == PHAlgorithm::Argon2id.ident();
+    // Accept only Argon2id for future rehash decisions
+    let alg_ok = parsed.algorithm.as_str() == argon2::Algorithm::Argon2id.as_ref();
     let valid = Argon2::default().verify_password(raw.as_bytes(), &parsed).is_ok();
     if !valid { return Ok((false, false)); }
     // Determine if parameters differ from our target (trigger rehash on next login or background job)
-    let needs_rehash = !alg_ok || parsed.params.get("m").and_then(|v| v.decimal()).unwrap_or(0) != ARGON2_M_COST as u64
-        || parsed.params.get("t").and_then(|v| v.decimal()).unwrap_or(0) != ARGON2_T_COST as u64
-        || parsed.params.get("p").and_then(|v| v.decimal()).unwrap_or(0) != ARGON2_P_COST as u64;
+    // Extract numeric params from the PHC string (m=, t=, p=)
+    // Fallback parse of param string slice (e.g. "m=19456,t=2,p=1")
+    let params_str = parsed.params.to_string();
+    let mut m = None; let mut t = None; let mut p = None;
+    for part in params_str.split(',') {
+        if let Some((k,v)) = part.split_once('=') {
+            if let Ok(num) = v.parse::<u32>() {
+                match k { "m" => m = Some(num), "t" => t = Some(num), "p" => p = Some(num), _ => {} }
+            }
+        }
+    }
+    let needs_rehash = !alg_ok
+        || m.unwrap_or(0) != ARGON2_M_COST
+        || t.unwrap_or(0) != ARGON2_T_COST
+        || p.unwrap_or(0) != ARGON2_P_COST;
     Ok((true, needs_rehash))
 }
 
