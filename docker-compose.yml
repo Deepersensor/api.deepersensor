@@ -44,7 +44,6 @@ services:
     image: ollama/ollama:latest
     volumes:
       - ollama_models:/root/.ollama
-    ports: []
     expose:
       - "11434"
     restart: unless-stopped
