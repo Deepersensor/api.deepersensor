@@ -14,6 +14,7 @@
     # pkgs.nodePackages.nodemon
     pkgs.gh
     pkgs.gcc
+    pkgs.openssl
   ];
 
   # Sets environment variables in the workspace
