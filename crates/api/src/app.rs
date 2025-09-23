@@ -8,8 +8,7 @@ use ds_core::config::AppConfig;
 use ds_model::{ModelProvider, OllamaProvider};
 use http::header::HeaderName;
 use crate::{state::AppState, cors::build_cors, routes, observability::REQUEST_ID_HEADER};
-// security headers are available but not currently applied to the global router
-// use crate::security::security_headers;
+// security headers layer available (currently not applied)
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -52,8 +51,6 @@ pub async fn build_app(cfg: Arc<AppConfig>) -> AppStateAndRouter {
         .merge(routes::routes())
         .layer(middleware)
         .layer(cors);
-        // security headers layered separately if needed; omitted here to satisfy trait bounds
-        // .layer(security_headers());
     AppStateAndRouter { state, router }
 }
 
