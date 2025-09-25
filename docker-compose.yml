@@ -55,18 +55,32 @@ services:
       - "11434"
     restart: unless-stopped
 
+  # nginx:
+  #   build:
+  #     context: .
+  #     dockerfile: nginx/Dockerfile
+  #   image: deepersensor/nginx:dev
+  #   depends_on:
+  #     - api
+  #   ports:
+  #     - "80:80"
+  #   restart: unless-stopped
+  #   environment:
+  #     - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx
+
+
   nginx:
-    build:
-      context: .
-      dockerfile: nginx/Dockerfile
-    image: deepersensor/nginx:dev
-    depends_on:
-      - api
-    ports:
-      - "80:80"
-    restart: unless-stopped
-    environment:
-      - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx
+      build:
+        context: .
+        dockerfile: nginx/Dockerfile
+      image: deepersensor/nginx:dev
+      depends_on:
+        - api
+      ports:
+        - "127.0.0.1:8181:80" # <-- SOLUTION: Expose port 80 internally on host port 8181.
+      restart: unless-stopped
+      environment:
+        - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx
 
 volumes:
   postgres_data: {}
