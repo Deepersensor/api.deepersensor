@@ -337,7 +337,7 @@ async fn login(
 
     use sqlx::Row;
     let id: uuid::Uuid = rec.try_get("id").map_err(|_| ApiError::Internal)?;
-    let email: String = rec.try_get("email").map_err(|_| ApiError::Internal)?;
+    let _email: String = rec.try_get("email").map_err(|_| ApiError::Internal)?;
     let password_hash: String = rec
         .try_get("password_hash")
         .map_err(|_| ApiError::Internal)?;
