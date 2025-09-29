@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Request, State},
+    extract::Request,
     middleware::Next,
     response::Response,
 };
@@ -14,8 +14,10 @@ pub struct AuthUser {
 }
 
 /// JWT authentication middleware extractor
+/// 
+/// This middleware extracts and verifies the JWT token from the Authorization header.
+/// The AppState is accessed via request extensions since middleware runs after state is attached.
 pub async fn require_auth(
-    State(state): State<crate::state::AppState>,
     mut req: Request,
     next: Next,
 ) -> Result<Response, ApiError> {
@@ -33,6 +35,16 @@ pub async fn require_auth(
     }
 
     let token = auth_header.strip_prefix("Bearer ").unwrap();
+
+    // Get state from request extensions (added by Axum's with_state)
+    let state = req
+        .extensions()
+        .get::<crate::state::AppState>()
+        .ok_or_else(|| {
+            tracing::error!("app state not found in request extensions");
+            ApiError::Internal
+        })?;
+
     let cfg = state.config();
 
     // Verify JWT

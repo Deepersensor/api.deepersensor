@@ -1,4 +1,9 @@
-use crate::{auth_middleware::{require_auth, AuthUser}, rate_limit::rate_limit, state::AppState, validation};
+use crate::{
+    auth_middleware::{require_auth, AuthUser},
+    rate_limit::rate_limit,
+    state::AppState,
+    validation,
+};
 use axum::middleware;
 use axum::response::sse::{Event, Sse};
 use axum::{
@@ -195,14 +200,14 @@ async fn chat(
     Json(input): Json<ChatIn>,
 ) -> ApiResult<Json<Vec<ChatOut>>> {
     validate_chat(&input)?;
-    
+
     tracing::info!(
         user_id = %user.user_id,
         model = %input.model,
         message_count = input.messages.len(),
         "chat request"
     );
-    
+
     let stream = state
         .provider
         .chat_stream(ChatRequest {
@@ -245,14 +250,14 @@ async fn chat_stream_sse(
     Json(input): Json<ChatIn>,
 ) -> ApiResult<Sse<impl Stream<Item = Result<Event, axum::Error>>>> {
     validate_chat(&input)?;
-    
+
     tracing::info!(
         user_id = %user.user_id,
         model = %input.model,
         message_count = input.messages.len(),
         "chat stream request"
     );
-    
+
     let stream = state
         .provider
         .chat_stream(ChatRequest {
@@ -422,17 +427,17 @@ async fn login(
 
 fn validate_chat(input: &ChatIn) -> ApiResult<()> {
     validation::validate_model_name(&input.model)?;
-    
+
     if input.messages.is_empty() {
         return Err(ApiError::Unprocessable("messages required".into()));
     }
     if input.messages.len() > 64 {
         return Err(ApiError::Unprocessable("too many messages (max 64)".into()));
     }
-    
+
     for m in &input.messages {
         validation::validate_message_content(&m.content, 8000)?;
     }
-    
+
     Ok(())
 }
