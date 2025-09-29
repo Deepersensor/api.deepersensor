@@ -1,0 +1,129 @@
+# ============================================
+# DeeperSensor API - Docker Build Context
+# ============================================
+# Excludes files/dirs from Docker build context
+# to reduce image size and build time
+
+# ---------------------------------------------
+# Version Control
+# ---------------------------------------------
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# ---------------------------------------------
+# Documentation
+# ---------------------------------------------
+*.md
+!README.md
+docs/
+TODO/
+ARCHITECTURE.md
+CONTRIBUTING.md
+LICENSE
+
+# ---------------------------------------------
+# Environment & Secrets
+# ---------------------------------------------
+.env
+.env.*
+*.env
+*.env.*
+env.sample
+secrets/
+*.key
+*.pem
+
+# ---------------------------------------------
+# Build Artifacts & Caches
+# ---------------------------------------------
+target/
+debug/
+**/target/
+**/*.rs.bk
+*.pdb
+**/mutants.out*/
+
+# Cargo cache (will be rebuilt in container)
+.cargo/
+**/Cargo.lock.bak
+
+# ---------------------------------------------
+# Testing & Coverage
+# ---------------------------------------------
+coverage/
+*.profraw
+*.profdata
+tarpaulin-report.html
+cobertura.xml
+tests/fixtures/
+
+# ---------------------------------------------
+# Development Tools
+# ---------------------------------------------
+# IDEs
+.vscode/
+.idea/
+*.iml
+*.sublime-*
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+*.log
+
+# ---------------------------------------------
+# Docker
+# ---------------------------------------------
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile.dev
+.dockerignore
+
+# ---------------------------------------------
+# CI/CD
+# ---------------------------------------------
+.github/
+.gitlab-ci.yml
+.travis.yml
+azure-pipelines.yml
+
+# ---------------------------------------------
+# Nginx (when building API image)
+# ---------------------------------------------
+nginx/
+
+# ---------------------------------------------
+# Temporary & Cache
+# ---------------------------------------------
+tmp/
+temp/
+*.tmp
+*.cache
+.cache/
+
+# ---------------------------------------------
+# Node/Frontend (if added later)
+# ---------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-*.log
+
+# ---------------------------------------------
+# Databases & Data
+# ---------------------------------------------
+*.db
+*.sqlite*
+data/
+backups/
+postgres_data/
+
+# ---------------------------------------------
+# Misc
+# ---------------------------------------------
+*.bak
+*.backup
+*~
