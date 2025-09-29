@@ -37,12 +37,14 @@ thiserror = "1"
 anyhow = "1"
 once_cell = "1"
 uuid = { version = "1", features = ["v4"] }
+regex = "1"
 
 # Concurrency & Async Helpers
 futures-util = "0.3"
 futures-core = "0.3"
 async-trait = "0.1"
 async-stream = "0.3"
+bytes = "1"
 
 # Auth & Security (placeholders for later)
 argon2 = "0.5"

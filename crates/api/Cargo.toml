@@ -23,7 +23,12 @@ tower-http = { workspace = true }
 uuid = { workspace = true }
 dashmap = { workspace = true }
 sqlx = { workspace = true }
+regex = { workspace = true }
+once_cell = { workspace = true }
 # Internal crates
 ds-core = { path = "../core" }
 ds-model = { path = "../model" }
 ds-auth = { path = "../auth" }
+
+[dev-dependencies]
+anyhow = { workspace = true }

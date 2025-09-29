@@ -1,4 +1,4 @@
-use crate::{rate_limit::rate_limit, state::AppState};
+use crate::{rate_limit::rate_limit, state::AppState, validation};
 use axum::response::sse::{Event, Sse};
 use axum::{
     extract::{ConnectInfo, State},
@@ -270,24 +270,9 @@ async fn signup(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(input): Json<SignupIn>,
 ) -> ApiResult<Json<SignupOut>> {
-    // Validate email format more thoroughly
-    if input.email.len() > 190 || !input.email.contains('@') || input.email.split('@').count() != 2
-    {
-        tracing::debug!(email = %input.email, "invalid email format");
-        return Err(ApiError::Unprocessable("invalid email format".into()));
-    }
-
-    // Validate password strength
-    if input.password.len() < 8 {
-        return Err(ApiError::Unprocessable(
-            "password must be at least 8 characters".into(),
-        ));
-    }
-    if input.password.len() > 128 {
-        return Err(ApiError::Unprocessable(
-            "password too long (max 128 characters)".into(),
-        ));
-    }
+    // Validate email and password using validation helpers
+    validation::validate_email(&input.email)?;
+    validation::validate_password(&input.password)?;
 
     // Basic per-IP rate limit reuse (same as list_models/chat) to slow signup abuse
     rate_limit(&state, addr.ip()).await?;
@@ -399,19 +384,18 @@ async fn login(
 }
 
 fn validate_chat(input: &ChatIn) -> ApiResult<()> {
-    if input.model.trim().is_empty() {
-        return Err(ApiError::Unprocessable("model required".into()));
-    }
+    validation::validate_model_name(&input.model)?;
+    
     if input.messages.is_empty() {
         return Err(ApiError::Unprocessable("messages required".into()));
     }
     if input.messages.len() > 64 {
-        return Err(ApiError::Unprocessable("too many messages".into()));
+        return Err(ApiError::Unprocessable("too many messages (max 64)".into()));
     }
+    
     for m in &input.messages {
-        if m.content.len() > 8000 {
-            return Err(ApiError::Unprocessable("message too long".into()));
-        }
+        validation::validate_message_content(&m.content, 8000)?;
     }
+    
     Ok(())
 }
