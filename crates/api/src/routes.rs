@@ -1,10 +1,11 @@
-use crate::{rate_limit::rate_limit, state::AppState, validation};
+use crate::{auth_middleware::{require_auth, AuthUser}, rate_limit::rate_limit, state::AppState, validation};
+use axum::middleware;
 use axum::response::sse::{Event, Sse};
 use axum::{
     extract::{ConnectInfo, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
+    Extension, Json,
 };
 use axum::{
     routing::{get, post},
@@ -21,15 +22,23 @@ use std::net::SocketAddr;
 use uuid::Uuid;
 
 pub fn routes() -> Router<AppState> {
-    Router::new()
+    // Public routes (no authentication required)
+    let public_routes = Router::new()
         .route("/health", get(health))
         .route("/readiness", get(readiness))
         .route("/metrics", get(metrics))
         .route("/v1/models", get(list_models))
+        .route("/v1/auth/signup", post(signup))
+        .route("/v1/auth/login", post(login));
+
+    // Protected routes (require JWT authentication)
+    let protected_routes = Router::new()
         .route("/v1/chat", post(chat))
         .route("/v1/chat/stream", post(chat_stream_sse))
-        .route("/v1/auth/signup", post(signup))
-        .route("/v1/auth/login", post(login))
+        .route_layer(middleware::from_fn(require_auth));
+
+    // Merge public and protected routes
+    public_routes.merge(protected_routes)
 }
 
 // Readiness check for Kubernetes - simpler than health, just checks if server is up
@@ -182,11 +191,18 @@ struct ChatOut {
 
 async fn chat(
     State(state): State<AppState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(user): Extension<AuthUser>,
     Json(input): Json<ChatIn>,
 ) -> ApiResult<Json<Vec<ChatOut>>> {
-    rate_limit(&state, addr.ip()).await?;
     validate_chat(&input)?;
+    
+    tracing::info!(
+        user_id = %user.user_id,
+        model = %input.model,
+        message_count = input.messages.len(),
+        "chat request"
+    );
+    
     let stream = state
         .provider
         .chat_stream(ChatRequest {
@@ -195,14 +211,23 @@ async fn chat(
         })
         .await
         .map_err(|e| {
-            tracing::error!(error = %e, "chat start failed");
+            tracing::error!(
+                error = %e,
+                user_id = %user.user_id,
+                model = %input.model,
+                "chat start failed"
+            );
             ApiError::Internal
         })?;
     let mut out = Vec::new();
     futures_util::pin_mut!(stream);
     while let Some(chunk) = stream.next().await {
         let c: ChatChunk = chunk.map_err(|e| {
-            tracing::error!(error = %e, "chat chunk error");
+            tracing::error!(
+                error = %e,
+                user_id = %user.user_id,
+                "chat chunk error"
+            );
             ApiError::Internal
         })?;
         out.push(ChatOut {
@@ -216,11 +241,18 @@ async fn chat(
 
 async fn chat_stream_sse(
     State(state): State<AppState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(user): Extension<AuthUser>,
     Json(input): Json<ChatIn>,
 ) -> ApiResult<Sse<impl Stream<Item = Result<Event, axum::Error>>>> {
-    rate_limit(&state, addr.ip()).await?;
     validate_chat(&input)?;
+    
+    tracing::info!(
+        user_id = %user.user_id,
+        model = %input.model,
+        message_count = input.messages.len(),
+        "chat stream request"
+    );
+    
     let stream = state
         .provider
         .chat_stream(ChatRequest {
@@ -229,7 +261,12 @@ async fn chat_stream_sse(
         })
         .await
         .map_err(|e| {
-            tracing::error!(error = %e, "chat start failed");
+            tracing::error!(
+                error = %e,
+                user_id = %user.user_id,
+                model = %input.model,
+                "chat start failed"
+            );
             ApiError::Internal
         })?;
     let mapped = stream.map(|chunk| match chunk {
