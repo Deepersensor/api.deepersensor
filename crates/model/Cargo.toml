@@ -13,3 +13,5 @@ anyhow = { workspace = true }
 async-trait = { workspace = true }
 async-stream = { workspace = true }
 futures-core = { workspace = true }
+bytes = { workspace = true }
+futures-util = { workspace = true }

@@ -1,11 +1,19 @@
-mod app; mod cors; mod observability; mod shutdown; mod state; mod rate_limit; mod routes; mod security;
-use std::sync::Arc;
-use tracing::{info, warn};
-use ds_core::config::AppConfig;
-use tokio::net::TcpListener;
+mod app;
+mod auth_middleware;
+mod cors;
+mod observability;
+mod rate_limit;
+mod routes;
+mod security;
+mod shutdown;
+mod state;
 use crate::app::{build_app, server_addr};
 use crate::observability::init_tracing;
 use crate::shutdown::shutdown_signal;
+use ds_core::config::AppConfig;
+use std::sync::Arc;
+use tokio::net::TcpListener;
+use tracing::{info, warn};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -19,7 +27,10 @@ async fn main() -> anyhow::Result<()> {
     // If migrations are not available in this workspace, skip running them during local builds.
     let migrations_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations");
     if migrations_path.exists() {
-        if let Err(e) = sqlx::migrate!("../../migrations").run(&app_state_and_router.state.db).await {
+        if let Err(e) = sqlx::migrate!("../../migrations")
+            .run(&app_state_and_router.state.db)
+            .await
+        {
             anyhow::bail!("failed running migrations: {e}");
         }
     } else {
@@ -27,7 +38,9 @@ async fn main() -> anyhow::Result<()> {
     }
     info!(%addr, env = %cfg.app.env, "starting server");
 
-    let router_with_state = app_state_and_router.router.with_state(app_state_and_router.state.clone());
+    let router_with_state = app_state_and_router
+        .router
+        .with_state(app_state_and_router.state.clone());
     let make_svc = router_with_state.into_make_service_with_connect_info::<std::net::SocketAddr>();
     let listener = TcpListener::bind(addr).await?;
     axum::serve(listener, make_svc)
@@ -43,7 +56,9 @@ fn enforce_prod_secrets(cfg: &AppConfig) -> anyhow::Result<()> {
             anyhow::bail!("insecure JWT_SECRET for production; must be overridden and >=32 chars");
         }
     } else {
-        if cfg.security.jwt_secret == "dev_insecure_change_me" { warn!("running with default insecure JWT secret - DO NOT USE IN PRODUCTION"); }
+        if cfg.security.jwt_secret == "dev_insecure_change_me" {
+            warn!("running with default insecure JWT secret - DO NOT USE IN PRODUCTION");
+        }
     }
     Ok(())
 }
