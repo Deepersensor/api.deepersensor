@@ -630,7 +630,7 @@ dependencies = [
  "argon2",
  "base64ct",
  "jsonwebtoken",
- "rand 0.8.5",
+ "rand 0.9.2",
  "serde",
  "thiserror 1.0.69",
  "tracing",
