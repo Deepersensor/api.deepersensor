@@ -18,8 +18,8 @@ authors = ["DeeperSensor <official-support@deepersensor.com>"]
 tokio = { version = "1", features = ["rt-multi-thread","macros","signal","time"] }
 axum = { version = "0.7", features = ["macros","json","tokio"] }
 hyper = { version = "1", features = ["full"] }
-tower = { version = "0.4", features = ["util","limit"] }
-tower-http = { version = "0.5", features = ["trace","cors","request-id","limit","compression-br", "compression-gzip", "set-header"] }
+tower = { version = "0.5", features = ["util","limit"] }
+tower-http = { version = "0.6", features = ["trace","cors","request-id","limit","compression-br", "compression-gzip", "set-header"] }
 
 # Serde / Config
 serde = { version = "1", features = ["derive"] }
