@@ -48,7 +48,7 @@ bytes = "1"
 
 # Auth & Security (placeholders for later)
 argon2 = "0.5"
-jsonwebtoken = "9"
+jsonwebtoken = "10"
 rand = "0.10"
 
 # HTTP Client
